@@ -59,5 +59,3 @@ def menu(carteira):
             print('Apenas números são permitidos')
         
 menu(carteira)
-
-    
