@@ -1,61 +1,93 @@
-from sistema import Conta
-carteira = Conta()
+# Arquivo principal: controla o fluxo do sistema e interação com o usuário
 
+from database import carrregar_dados, salvar_dados
+from account import Conta
+from utils import ler_valor
+
+# Inicializa a conta com dados persistidos (saldo e histórico)
+dados = carrregar_dados()
+carteira = Conta(dados['saldo'],dados['transacoes'])
+
+# Loop até o usuário inserir um valor válido ou sair
 def depositar2(carteira):
-    valor = input('Insira o valor do depósito (Caso queira voltar ao menu, digite " SAIR "): ').strip().upper()
-    if valor == 'SAIR':
-        menu(carteira)
-    else:
+    while True:
+        valor = ler_valor('Insira o valor do depósito')
+# Permite sair da operação digitando "SAIR"
+        if valor is None:
+            return
+
         try:
-            valor = valor.replace(',','.')
             carteira.depositar(valor)
-            print('Deposito realizado com sucesso')
-            
-        except ValueError:
-            print('Não foi possivel realizar a operação')
+            salvar_dados(carteira)
+            print('Depósito realizado com sucesso')
+            return
+        
+        except ValueError as erro:
+            print(erro)
+            print('-'*40)
+            continue
 
-def sacar2(carteira):     
-        valor = input('Insira o valor do saque (Caso queira voltar ao menu, digite " SAIR " ): ').strip().upper()
-        if valor == 'SAIR':
-            menu(carteira)
-        else:
-            try:
-                valor = valor.replace(',','.')
-                carteira.sacar(valor)
-                print('Saque realizado com sucesso')
+# Loop até o usuário inserir um valor válido ou sair
+def sacar2(carteira):
+    while True:
+        valor = ler_valor('Insira o valor do saque')
+# Permite sair da operação digitando "SAIR"
+        if valor is None:
+            return
 
-            except ValueError:
-                print('Não foi possivel realizar a operação')
-     
+        try:
+            carteira.sacar(valor)
+            salvar_dados(carteira)
+            print('Saque realizado com sucesso')
+            return
+        
+        except ValueError as erro:
+            print(erro)
+            print('-'*40)
+            continue
+
+def transacoes(carteira):
+    if not carteira.transacoes:
+        print('Nenhuma transação registrada')
+        return
+    
+    for transacao in carteira.transacoes:
+        print(f'{transacao['tipo']} - R$ {transacao['valor']}')
+
+
 def ver_saldo2(carteira):
-    print(carteira.ver_saldo())
+    print(f'Saldo: R${carteira.ver_saldo()}')
 
+# Mapeia as opções do menu para suas funções
 def menu(carteira):
     while True:
         print('-'*40)
         print('MENU DE OPÇÃO')
-        print('1 - [ DEPOSITAR ] \n2 - [SACAR] \n3 - [VER SALDO] \n4 - [SAIR]')
-
+        print('1 - [ DEPOSITAR ] \n2 - [ SACAR ] \n3 - [ VER SALDO ] \n4 - [ TRANSACOES ] \n5 - [ SAIR ]')
+        
+        opcoes = {
+            1: depositar2,
+            2: sacar2,
+            3: ver_saldo2,
+            4:transacoes
+        }
         try:
             opcao = int(input('Escolha uma opção: '))
-            print('-'*40)
-            if opcao == 1:
-                depositar2(carteira)
-
-            elif opcao == 2:
-                sacar2(carteira)
             
-            elif opcao == 3:
-                ver_saldo2(carteira)
-
-            elif opcao == 4:
+            if opcao == 5:
                 print('Programa encerrado')
                 break
 
+            funcao = opcoes.get(opcao)
+            if funcao:
+                funcao(carteira)
+                
             else:
-                print('Esse número não esta no menu de opção')
+                print('Opção inválida, tente novamente.')
             
         except ValueError:
-            print('Apenas números são permitidos')
+            print('Apenas números são permitidos.')
         
-menu(carteira)
+# Garante que o menu só seja executado quando este arquivo for o principal
+if __name__ == "__main__":
+    menu(carteira)

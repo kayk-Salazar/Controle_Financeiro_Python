@@ -1,26 +1,50 @@
+# Representa uma conta com saldo e histórico de transações
 class Conta:
-    def __init__(self):
-        self.saldo = 500
+# Inicializa a conta com saldo e histórico; cria lista vazia se não houver transações
 
-    def depositar(self,valor):
-        valor = float(valor)
-        if valor > 0:
-            self.saldo += valor 
-    
+    def __init__(self,saldo = 0, transacoes = None):
+        self.saldo = saldo
+        if transacoes is None:
+            self.transacoes = []
         else:
-            raise ValueError('O valor do deposito não pode ser negativo') 
+            self.transacoes = transacoes
+    
+# Garante que o valor seja numérico e maior que zero
+    def validar_valor(self,valor):
+        if not isinstance(valor,(float,int)):
+            raise ValueError('Entrada inválida: o valor deve ser numérico')
         
+        if valor <= 0:
+            raise ValueError('Entrada inválida: o valor não pode ser negativo')
+    
+# Realiza depósito e registra a transação
+    def depositar(self,valor): 
+        self.validar_valor(valor)
+        self.saldo += valor
+        # Registra a operação no histórico
+        self.transacoes.append({
+            'tipo': 'deposito',
+            'valor': valor
+        })
+          
+# Realiza saque se houver saldo suficiente e registra a transação
     def sacar(self,valor):
-        valor = float(valor)
+        self.validar_valor(valor)
+       
         if valor <= self.saldo:
-            self.saldo -= valor 
-                 
+            self.saldo -= valor
+            self.transacoes.append({
+            'tipo': 'saque',
+            'valor': valor
+        })
+# Impede saque maior que o saldo disponível
         else:
-            raise ValueError('Você não pode sacar valores maiores que seu saldo')
+            raise ValueError('Entrada inválida: o valor do saque não pode ser maior que saldo')
         
+
     def ver_saldo(self):
-        return f'Saldo: {self.saldo}'
+        return self.saldo
     
-    
+
 
     
