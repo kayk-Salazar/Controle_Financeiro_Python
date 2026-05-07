@@ -16,6 +16,7 @@ class Conta:
     def depositar(self,valor): 
         self.validar_valor(valor)
         self.saldo += valor
+        self.saldo = round(self.saldo, 2)
         return self.saldo
      
     # Realiza saque se houver saldo suficiente e registra a transação
@@ -24,6 +25,7 @@ class Conta:
        
         if valor <= self.saldo:
             self.saldo -= valor
+            self.saldo = round(self.saldo, 2)
             return self.saldo
     
         # Impede saque maior que o saldo disponível
