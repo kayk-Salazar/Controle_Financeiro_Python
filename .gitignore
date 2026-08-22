@@ -1,4 +1,4 @@
 __pycache__/
 *.pyc
-data.json
-banco.db
+
+.env

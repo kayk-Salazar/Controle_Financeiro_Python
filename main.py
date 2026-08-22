@@ -1,125 +1,164 @@
-from database import DatabaseConta
-from account import Conta
-import service
+from validators import (
+    AccountNumberValidator,
+    AmountValidator,
+    CpfValidator,
+    DateValidator,
+    FirstNameValidator,
+    EmailValidator,
+    IdValidator,
+    LastNameValidator,
+    PasswordValidator,
+    PhoneValidator,
+    NumberValidator,
+)
+
+from services.account_service import AccountService
+from services.transaction_service import TransactionService
+from services.user_sevice import UserService
+from services.admin_service import AdminService
+from services.authentication_service import AuthenticationService
+from services.banking_service import BankingService
+from services.user_account_service import UserAccountService
+
+from database.connection import Connection
+from database.initializer import DatabaseInitializer
+
+from repositories.admin_repository import AdminRepository
+from repositories.account_repository import AccountRepository
+from repositories.user_repository import UserRepository
+from repositories.transation_repository import TransactionRepository
+from repositories.user_account_repository import UserAccountRepository
+
+from security.password_hash import PasswordHasher
+
+from ui.main_ui import MainUI
+from ui.user_ui import UserUI
+from ui.admin_ui import AdminUI
+
+def main():
+    connection = Connection()
+
+    try:
+        connection.open_connection()
+
+        initializer = DatabaseInitializer(connection)
+        initializer.initializer()
 
 
-def iniciar():
-    # Inicializa o banco e garante que a tabela exista
-    data = DatabaseConta()
-    data.criar_tabela()
-    # Recupera o último saldo salvo para continuar de onde parou
-    saldo_inicial = data.buscar_ultimo_saldo()
-    conta = Conta(saldo_inicial)
+        #Repositories
+        user_repository = UserRepository(connection)
+        account_repository = AccountRepository(connection)
+        transaction_repository = TransactionRepository(connection)
+        admin_repository = AdminRepository(connection)
+        user_account_repository = UserAccountRepository(connection)
 
-    # FLUXOS DO MENU PRINCIPAL
-    # Cada função abaixo representa uma operação do sistema.
-    # Aqui acontece a interação direta com o usuário (input) antes de chamar o service.
-    def fluxo_deposito():
-        while True:
-            valor = input("Digite o valor do depósito (ou VOLTAR): ")
-            resultado = service.depositar(conta, data, valor)
 
-            if resultado in ("VOLTAR", "SUCESSO"):
-                return
+        #Vlidators
+        account_number_validator = AccountNumberValidator()
+        amount_validator = AmountValidator()
+        cpf_validator = CpfValidator()
+        date_validator = DateValidator()
+        first_name_validator = FirstNameValidator()
+        email_validator = EmailValidator()
+        id_validator = IdValidator()
+        last_name_validator = LastNameValidator()
+        password_validator = PasswordValidator()
+        phone_validator = PhoneValidator()
+        number_validator = NumberValidator()
+        
 
-    def fluxo_saque():
-        while True:
-            valor = input("Digite o valor do saque (ou VOLTAR): ")
-            resultado = service.sacar(conta, data, valor)
+        #Securities
+        password_hash = PasswordHasher()
 
-            if resultado in ("VOLTAR", "SUCESSO"):
-                return
 
-    def fluxo_ver_saldo():
-        saldo = data.buscar_ultimo_saldo()
-        print(f"Saldo atual: R$ {saldo:.2f}")
+        #Services
+        user_service = UserService(
+            connection, 
+            user_repository, 
+            account_repository,
+            password_hash,
+            first_name_validator, 
+            last_name_validator, 
+            cpf_validator, 
+            date_validator, 
+            email_validator, 
+            phone_validator, 
+            password_validator,
+            id_validator
+        )
 
-    
-    # FLUXOS DO SUBMENU DE BUSCA
-    # Aqui ficam os fluxos relacionados às buscas de transações.
-    # Cada opção direciona para um tipo específico de filtro.
-    def fluxo_buscar_por_tipo():
-        tipo = input("Digite (deposito/saque) ou VOLTAR: ")
-        service.buscar_por_tipo(data, tipo)
+        admin_service = AdminService(
+            connection,
+            id_validator,
+            admin_repository
+        )
 
-    def fluxo_buscar_por_valor():
-        valor = input("Digite o valor ou VOLTAR: ")
-        service.buscar_por_valor(data, valor)
+        account_service = AccountService(
+            connection,
+            account_repository,
+            id_validator,
+            account_number_validator,
+            date_validator
+        )
 
-    def fluxo_buscar_por_data():
-        data_input = input("Digite a data (YYYY-MM-DD) ou VOLTAR: ")
-        service.buscar_por_data(data, data_input)
+        authentication_service = AuthenticationService(
+            connection,
+            user_repository,
+            password_hash
+        )
 
-    def fluxo_buscar_por_periodo():
-        inicio = input("Data início (YYYY-MM-DD) ou VOLTAR: ")
-        if inicio.upper() == "VOLTAR":
-            return
+        banking_service = BankingService(
+            connection,
+            amount_validator,
+            account_repository,
+            transaction_repository
+        )
 
-        fim = input("Data fim (YYYY-MM-DD): ")
-        service.buscar_por_periodo(data, inicio, fim)
+        transaction_service = TransactionService(
+            connection,
+            transaction_repository,
+            id_validator,
+            number_validator
+        )
+        user_account_service = UserAccountService(
+            connection,
+            id_validator,
+            user_account_repository
+        )
 
-    # Submenu responsável por direcionar para os tipos de busca
-    def fluxo_menu_busca():
-        opcoes = {
-            "1": fluxo_buscar_por_tipo,
-            "2": fluxo_buscar_por_valor,
-            "3": fluxo_buscar_por_data,
-            "4": fluxo_buscar_por_periodo,
-            "0": None
-        }
+        user_ui = UserUI( 
+            authentication_service, 
+            user_account_service, 
+            banking_service, 
+            transaction_service, 
+            user_service, 
+            first_name_validator, 
+            last_name_validator,
+            date_validator, 
+            cpf_validator, 
+            email_validator, 
+            phone_validator, 
+            password_validator
+                )
+        
+        admin_ui = AdminUI(
+            transaction_service,
+            user_service,
+            user_account_service,
+            account_service,
+            user_ui
+        )
+        
+        main_ui = MainUI(
+            user_ui,
+            admin_ui
+        )
+        
+        main_ui.start()
 
-        while True:
-            print("\n=== BUSCAR TRANSAÇÕES ===")
-            print("1 - Por tipo")
-            print("2 - Por valor")
-            print("3 - Por data")
-            print("4 - Por período")
-            print("0 - Voltar")
-
-            opcao = input("Escolha: ")
-
-            if opcao == "0":
-                return
-
-            funcao = opcoes.get(opcao)
-
-            if funcao:
-                funcao()
-            else:
-                print("Opção inválida")
-
-    # MENU PRINCIPAL 
-    # Controla o fluxo geral do programa e redireciona para cada funcionalidade
-    opcoes_menu = {
-        "1": fluxo_deposito,
-        "2": fluxo_saque,
-        "3": fluxo_ver_saldo,
-        "4": fluxo_menu_busca,
-        "0": None
-    }
-
-    while True:
-        print("\n=== CONTA BANCÁRIA ===")
-        print("1 - Depositar")
-        print("2 - Sacar")
-        print("3 - Ver saldo")
-        print("4 - Buscar transações")
-        print("0 - Sair")
-
-        opcao = input("Escolha: ")
-
-        if opcao == "0":
-            data.fechar_conexao()
-            print("Saindo...")
-            break
-
-        funcao = opcoes_menu.get(opcao)
-
-        if funcao:
-            funcao()
-        else:
-            print("Opção inválida")
-
+    finally:
+        connection.close_connection()
 
 if __name__ == "__main__":
-    iniciar()
+    main()
+
